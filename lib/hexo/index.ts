@@ -5,6 +5,7 @@ import Database from 'warehouse';
 import { magenta, underline } from 'picocolors';
 import { EventEmitter } from 'events';
 import { readFile } from 'hexo-fs';
+import { realpath } from 'node:fs/promises';
 import Module from 'module';
 import { runInThisContext } from 'vm';
 const { version } = require('../../package.json');
@@ -471,11 +472,12 @@ class Hexo extends EventEmitter {
   }
 
   loadPlugin(path: string, callback?: NodeJSLikeCallback<any>): Promise<any> {
-    return readFile(path).then(script => {
+    // use real path to support pnpm
+    return Promise.all([readFile(path), realpath(path)]).then(([script, rpath]) => {
       // Based on: https://github.com/nodejs/node-v0.x-archive/blob/v0.10.33/src/node.js#L516
       const module = new Module(path);
       module.filename = path;
-      module.paths = Module._nodeModulePaths(path);
+      module.paths = Module._nodeModulePaths(rpath);
 
       function req(path: string) {
         return module.require(path);
